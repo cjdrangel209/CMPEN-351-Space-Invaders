@@ -89,10 +89,12 @@ la $sp, StackEnd
 	li      $t1, 0x00000002     # Interrupt enable bit
 	sw      $t1, ($t0)
 
+#loads initial message for user
 la $a0, msg1
 li $v0, 4
 syscall
 
+#draws hero on display
 li $a0, 123
 li $a1, 246
 li $a2, 7
@@ -102,55 +104,55 @@ jal DrawBox
 
 Main:
 la $t0, laserCount
-lw $t1, 0($t0)
-beqz $t1, contMain
+lw $t1, 0($t0)          #loads value of laser count into t1
+beqz $t1, contMain      #jumps over CheckLaser function if laser count = 0
 
 jal CheckLaser
 
 contMain:
-jal NewDisplay
+jal NewDisplay          #jump to function to draw display
 
-jal MoveHero
+jal MoveHero            #jump to function to move hero
 
-la $a0, lastMove
-jal MoveBox
+la $a0, lastMove        #loads the last move into a0
+jal MoveBox             #jump to function to move boxes/aliens
 
 li $a0, 1000
-jal Pause
+jal Pause               #pause program
 
-jal ClearBoxes
+jal ClearBoxes          #clears boxes from screen
 
 la $t3, boxesHit
-lw $t4, 0($t3)
-beq $t4, 28, win
+lw $t4, 0($t3)          #loads number of boxes hit into t4
+beq $t4, 28, win        #if all boxes have been hit, move to win
 
 la $t0, Y
-lw $t1, 4($t0)
-ble $t1, 236, Main
+lw $t1, 4($t0)          #loads value of last y coordinate into t1
+ble $t1, 236, Main      #continues program loop if y coordinate hasn't reached bottom yet
 
-la $a0, msg2
+la $a0, msg2            #loads message to user that games is over
 li $v0, 4
 syscall
 
-la $t2, score
-lw $a0, 0($t2)
+la $t2, score       
+lw $a0, 0($t2)          #loads score into a0
 li $v0, 1
-syscall
+syscall                 #displays score
 j end
 
 win:
-la $a0, msg3
-li $v0, 4
+la $a0, msg3            
+li $v0, 4               #displays win message to user
 syscall
 
 la $t2, score
 lw $a0, 0($t2)
-li $v0, 1
+li $v0, 1               #displays users score
 syscall
 
 end:
 li $v0, 10
-syscall
+syscall                 #exits program
 
 #Procedure: calcAddress
 #Input: a0 = x coordinate (0-255)
@@ -291,6 +293,7 @@ addiu $sp, $sp, 4	#adjust sp
 jr $ra
 
 #Procedure: NewDisplay
+#Draws the display of the aliens and the lasers onto the screen
 NewDisplay:
 addiu $sp, $sp, -36	#make room on stack for 7 words
 sw $ra 32($sp)		#store ra
@@ -299,7 +302,7 @@ sw $ra 32($sp)		#store ra
 li $t0, 1		#row number
 la $t1, Y		#t1 = address of the y coordinate
 la $t2, Color		#t2 = address of the color number
-la $t6, AlienTable
+la $t6, AlienTable  #loads AlientTable into t6
 outLoop:
 rem $t3, $t0, 2		#t3 = flag 1 if t0 is odd and 0 if odd
 beq $t3, 0, even
@@ -323,8 +326,8 @@ sw $t3, 12($sp)		#store t3 on stack
 sw $t4, 8($sp)		#store t4 on stack
 sw $t5, 4($sp)		#store t5 on stack
 
-lw $t7, 0($t6)
-bnez $t7, jumpDraw
+lw $t7, 0($t6)      #loads value of AlienTable into t7
+bnez $t7, jumpDraw  #jumps over drawing alien if value in table is not 0
 
 lw $a0, 0($t4)		
 lw $a1, 0($t1)
@@ -351,31 +354,31 @@ addiu $t2, $t2, 4	#moves pointer for color number by 4
 addiu $t0, $t0, 1	#adds one to the number of rows
 ble $t0, 5, outLoop
 
-la $t0, laserCount
-lw $t1, 0($t0)
-li $t4, 0
-beqz $t1, displayCont
+la $t0, laserCount      
+lw $t1, 0($t0)          #loads laser count into t1
+li $t4, 0               #t4 is counter
+beqz $t1, displayCont   #if laser count = 0 then jump of drawing lasers
 
 la $t2, laser
 drawLaser:
 sw $t4, 8($sp)
 sw $t1, 4($sp)
 sw $t2, 0($sp)
-lw $a0, 0($t2)
-lw $a1, 4($t2)
-addiu $t3, $a1, -5
-sw $t3, 4($t2)
-lw $a2, 8($t2)
-beqz $a2, jumpdrawLaser
-lw $a3, 12($t2)
-jal VertLine
+lw $a0, 0($t2)          #loads x value of laser into a0
+lw $a1, 4($t2)          #loads y value of laser into a1
+addiu $t3, $a1, -5      #stores adjusted y into t3
+sw $t3, 4($t2)          #stores new y into laser
+lw $a2, 8($t2)          #loads laser color into a2
+beqz $a2, jumpdrawLaser #if laser color is black jump over drawing laser
+lw $a3, 12($t2)         #loads length of laser into a3
+jal VertLine            #draws laser
 jumpdrawLaser:
 lw $t2, 0($sp)
 lw $t1, 4($sp)
 lw $t4, 8($sp)
-addiu $t2, $t2, 16
-addiu $t4, $t4, 1
-bne $t4, $t1, drawLaser
+addiu $t2, $t2, 16      #move laser pointer to next laser
+addiu $t4, $t4, 1       #add one to counter
+bne $t4, $t1, drawLaser #if counter does not equal laser count, keep drawing lasers
 
 displayCont:
 lw $ra, 32($sp)		#loads ra off stack
@@ -398,57 +401,58 @@ bltu $t2, $t0, pauseLoop	#if elapsed < timeout; goes back to loop again
 
 jr $ra
 
-#Procedure: Move
+#Procedure: MoveBox
 #Input: a0 - last move (1 = right, 2= left, 3 = down)
+#moves boxes/aliens into a new location
 MoveBox:
-addiu $sp, $sp, -4
-sw $ra, 0($sp)
+addiu $sp, $sp, -4          #adjust stack
+sw $ra, 0($sp)              #store ra
 
-lw $t0, 0($a0)
-la $t1, OddX
-beq $t0, 1, rightCheck
-beq $t0, 2, leftCheck
-beq $t0, 3, downCheck
+lw $t0, 0($a0)              #loads last move into t0
+la $t1, OddX                #loads address of OddX into t1
+beq $t0, 1, rightCheck      #if t0 = 1; go to rightCheck
+beq $t0, 2, leftCheck       #else if t0 = 2; go to leftCheck
+beq $t0, 3, downCheck       #else if t0 = 3; go to downCheck 
 
 rightCheck:
-lw $t2, 0($t1)
-bge $t2, 44, moveDown
-j moveRight
+lw $t2, 0($t1)              #loads x value into t2
+bge $t2, 44, moveDown       #checks if x value is greater than 44, if it is move the aliens down
+j moveRight                 #else move them to the right
 
 leftCheck:
-lw $t2, 0($t1)
-ble $t2, 2, moveDown
-j moveLeft
+lw $t2, 0($t1)              #loads x value into t2
+ble $t2, 2, moveDown        #checks if x value is less than or equal to 2, if it is go to move aliens down
+j moveLeft                  #else move the aliens to the left
 
 downCheck:
-lw $t2, 0($t1)
-ble $t2, 2, moveRight
-j moveLeft
+lw $t2, 0($t1)              #loads x value into t2
+ble $t2, 2, moveRight       #checks if they are all the way against the left, if they are move to the right
+j moveLeft                  #else move them to the left
 
 moveRight:
 li $t0, 3		#t0 = value to move x coordinate by
 la $t1, OddX
 li $t2, 0		#counter
 rightLoopOdd:
-lw $t3, 0($t1)
-add $t3, $t3, $t0
-sw $t3, 0($t1)
-addiu $t1, $t1, 4
-addiu $t2, $t2, 1
-blt $t2, 6, rightLoopOdd
+lw $t3, 0($t1)              #loads current x into t3
+add $t3, $t3, $t0           #adds to the x value
+sw $t3, 0($t1)              #stores the new x value
+addiu $t1, $t1, 4           #moves pointer to the next x value
+addiu $t2, $t2, 1           #adds to counter
+blt $t2, 6, rightLoopOdd    #continue if haven't done all x values yet
 
 la $t1, EvenX
-li $t2, 0
+li $t2, 0                   #counter
 rightLoopEven:
-lw $t3, 0($t1)
-add $t3, $t3, $t0
-sw $t3, 0($t1)
-addiu $t1, $t1, 4
-addiu $t2, $t2, 1
-blt $t2, 5, rightLoopEven
+lw $t3, 0($t1)              #loads current x into t3
+add $t3, $t3, $t0           #adds to the x value
+sw $t3, 0($t1)              #stores new x value
+addiu $t1, $t1, 4           #moves pointer to the next x value
+addiu $t2, $t2, 1           #adds to counter
+blt $t2, 5, rightLoopEven   #continue if haven't done all x values yet
 
 li $t4, 1
-sw $t4, lastMove
+sw $t4, lastMove            #stores last move as being to the right
 j moveOn
 
 moveLeft:
@@ -456,51 +460,53 @@ li $t0, -3		#t0 = value to move x coordinate by
 la $t1, OddX
 li $t2, 0		#counter
 leftLoopOdd:
-lw $t3, 0($t1)
-add $t3, $t3, $t0
-sw $t3, 0($t1)
-addiu $t1, $t1, 4
-addiu $t2, $t2, 1
-blt $t2, 6, leftLoopOdd
+lw $t3, 0($t1)              #loads current x value into t3
+add $t3, $t3, $t0           #adds to x value
+sw $t3, 0($t1)              #stores new x value
+addiu $t1, $t1, 4           #moves pointer to the next x value
+addiu $t2, $t2, 1           #adds to counter
+blt $t2, 6, leftLoopOdd     #continues loop if all x values haven't been modified
 
 la $t1, EvenX
-li $t2, 0
+li $t2, 0                   #counter
 leftLoopEven:
-lw $t3, 0($t1)
-add $t3, $t3, $t0
-sw $t3, 0($t1)
-addiu $t1, $t1, 4
-addiu $t2, $t2, 1
-blt $t2, 5, leftLoopEven
+lw $t3, 0($t1)              #loads current x value into t3
+add $t3, $t3, $t0           #adds to the x value
+sw $t3, 0($t1)              #stores new x value
+addiu $t1, $t1, 4           #moves pointer to the next x value
+addiu $t2, $t2, 1           #adds to the counter
+blt $t2, 5, leftLoopEven    #continue loop if all x values haven't been modified
 
 li $t4, 2
-sw $t4, lastMove
+sw $t4, lastMove            #stores last move as being to the left
 j moveOn
 
 moveDown:
 
-la $t1, Y
-li $t2, 0
+la $t1, Y                   #loads address of Y
+li $t2, 0                   #counter
 downLoop:
-lw $t3, 0($t1)
-addiu $t3, $t3, 5
-sw $t3, 0($t1)
-addiu $t1, $t1, 4
-addiu $t2, $t2, 1
-blt $t2, 5, downLoop
+lw $t3, 0($t1)              #loads value of current Y
+addiu $t3, $t3, 5           #adds to the y value
+sw $t3, 0($t1)              #stores the new y value
+addiu $t1, $t1, 4           #moves pointer to the next y value
+addiu $t2, $t2, 1           #adds to counter
+blt $t2, 5, downLoop        #continues loop if all y values haven't been modified
 
 li $t4, 3
-sw $t4, lastMove
+sw $t4, lastMove            #stores last move as being down
 
 j moveOn
 
 moveOn:
 
-lw $ra, 0($sp)
-addiu $sp, $sp, 4
+lw $ra, 0($sp)              #loads ra from stack
+addiu $sp, $sp, 4           #readjusts stack
 
 jr $ra
 
+#Procedure: ClearBoxes
+#Clears boxes from screen using large box and serveral lines
 ClearBoxes:
 addiu $sp, $sp, -8	#make room for stack, 1 word
 sw $ra, 4($sp)		#store ra
@@ -508,94 +514,95 @@ li $a0, 0		#x coordinate = 0
 li $a1, 0		#y coordinate = 0
 li $a2, 0		#black color
 li $a3, 246		
-jal DrawBox
+jal DrawBox     #draws box
 
-li $t0, 246
+li $t0, 246         #position of where box ends
 clearLoop:
-sw $t0, 0($sp)
+sw $t0, 0($sp)      #stores t0 to stack
 move $a0, $t0
 li $a1, 0
 li $a2, 0
 li $a3, 246
-jal VertLine
-lw $t0, 0($sp)
-addiu $t0, $t0, 1
-ble $t0, 256, clearLoop
+jal VertLine        #draws vertical line
+lw $t0, 0($sp)      #loads t0 from stack
+addiu $t0, $t0, 1   #adds one to position of t0
+ble $t0, 256, clearLoop     #continues loop until reaches edge
 
 lw $ra, 4($sp)		#restore ra
 addiu $sp, $sp, 8	#adjust sp
 jr $ra
 
 #Procedure: MoveHero
+#moves hero or shoots laser based on value in queue
 MoveHero:
-addiu $sp, $sp, -16
-sw $ra, 12($sp)
+addiu $sp, $sp, -16             #adjusts stack
+sw $ra, 12($sp)                 #stores ra
 
-la $t0, queue
-la $t1, queue_start
-lw $t2, 0($t1)
+la $t0, queue                   #loads the address of the queue into t0
+la $t1, queue_start         
+lw $t2, 0($t1)                  #loads the value of where the queue starts into t2
 sw $t2, 8($sp)
-add $t0, $t0, $t2
-lw $v0, 0($t0)
-beqz $v0, heroConti
+add $t0, $t0, $t2               #adds the address of the queue to the queue start
+lw $v0, 0($t0)                  #loads the value from the queue into v0
+beqz $v0, heroConti             #if there is no value in queue jump to continue program
 
-beq $v0, 32, fireLaser
+beq $v0, 32, fireLaser          #if ASCII value of queue value is 32, ie space bar, jump to fire laser
 
-sw $v0, 4($sp)
-la $t0, HeroX
+sw $v0, 4($sp)                  #store v0 to stack
+la $t0, HeroX                   #loads address of the hero's x into t0
 sw $t0, 0($sp)
-lw $a0, 0($t0)
+lw $a0, 0($t0)                  #loads value of hero x into a0
 li $a1, 246
-li $a2, 0
+li $a2, 0                       #makes color of hero black to delete old hero
 li $a3, 10
-jal DrawBox
+jal DrawBox                     #draws black box
 
 lw $t0, 0($sp)
 lw $v0, 4($sp)
 lw $a0, 0($t0)
-beq $v0, 97, heroLeft
-beq $v0, 100, heroRight
+beq $v0, 97, heroLeft          #if value from queue is 97, ie a key, move hero to the left
+beq $v0, 100, heroRight        #else if value from queue is 100, ie d key, move hero to the right
 
 heroLeft:
-addiu $a0, $a0, -30
+addiu $a0, $a0, -30            #adjust hero x position
 j heroCont
 
 heroRight:
-addiu $a0, $a0, 30
+addiu $a0, $a0, 30             #adjust hero x position
 j heroCont
 
 fireLaser:
 la $t0, laserCount
-lw $t1, 0($t0) 
-addiu $t1, $t1, 1
-sw $t1, 0($t0)
+lw $t1, 0($t0)                 #load value of laser count into t1
+addiu $t1, $t1, 1              #add one to laser count
+sw $t1, 0($t0)                 #store new laser count
 
 addiu $t1, $t1, -1
 mul $t1, $t1, 16
 
 la $t2, laser
-add $t2, $t2, $t1
-la $t3, HeroX
-lw $t4, 0($t3)
-addiu $t4, $t4, 5
-sw $t4, 0($t2)
+add $t2, $t2, $t1              #starting address for new laser
+la $t3, HeroX           
+lw $t4, 0($t3)                 #value of hero x in t4
+addiu $t4, $t4, 5              #adding 5 to hero x for middle position of hero where laser should come from
+sw $t4, 0($t2)                 #store laser x
 li $t3, 236
-sw $t3, 4($t2)
+sw $t3, 4($t2)                 #store laser y
 li $t3, 7
-sw $t3, 8($t2)
+sw $t3, 8($t2)                 #store laser color
 li $t3, 10
-sw $t3, 12($t2)
+sw $t3, 12($t2)                #store laser length
 
 li $a0, 60
 li $a1, 1000
 li $a2, 31
 li $a3, 127
 li $v0, 31
-syscall
+syscall                        #make noise when laser is fired
 
 lw $t2, 8($sp)
 addiu $t2, $t2, 4
-sw $t2, queue_start
+sw $t2, queue_start            #adjust queue start position to next value
 j heroConti
 
 heroCont:
@@ -603,55 +610,56 @@ sw $a0, HeroX
 li $a1, 246
 li $a2, 7
 li $a3, 10
-jal DrawBox
+jal DrawBox                    #draws new hero
 lw $t2, 8($sp)
 
-addiu $t2, $t2, 4
-sw $t2, queue_start
+addiu $t2, $t2, 4           
+sw $t2, queue_start            #adjust queue start position to next value
 
 heroConti:
-lw $ra, 12($sp)
-addiu $sp, $sp, 16
+lw $ra, 12($sp)                #load ra from stack
+addiu $sp, $sp, 16             #readjust stack
 
 jr $ra
 
 #Procedure: Check Laser
+#checks to see if laser has made collision with alien
 CheckLaser:
-addiu $sp, $sp, -8
-sw $ra, 4($sp)
+addiu $sp, $sp, -8          #adjust stack
+sw $ra, 4($sp)              #store ra to stack
 
 la $t1, laserCount
-lw $v0, 0($t1)
-li $v1, 0
+lw $v0, 0($t1)              #loads value of laser count into v0
+li $v1, 0                   #v1 = counter
 
 la $t0, laser
 
 laserCheck:
-lw $t1, 4($t0)
+lw $t1, 4($t0)              #loads y coordinate of laser into t1
 la $t2, Y
-li $t3, 0
+li $t3, 0                   #counter
 checkY:
-lw $t4, 0($t2)
-addiu $t4, $t4, 10
-addiu $t2, $t2, 4
-addiu $t3, $t3, 1
-bgt $t1, $t4, checkYcont 
-addiu $t4, $t4, -10
-blt $t1, $t4, checkYcont
-j checkX
+lw $t4, 0($t2)              #value of next y coordinate of alien
+addiu $t4, $t4, 10          #adjusts y value for edge of alien
+addiu $t2, $t2, 4           #move to next alien y value
+addiu $t3, $t3, 1           #add one to counter
+bgt $t1, $t4, checkYcont    #check if y value of laser is within first bound; jumps if not
+addiu $t4, $t4, -10         #adjusts for other bound
+blt $t1, $t4, checkYcont    #jump if not within second bound
+j checkX                    #jump to check x if between both y bounds
 
 checkYcont:
-blt $t3, 5, checkY
-ble $t1, 10, reachedTop
+blt $t3, 5, checkY          #continues checking other y values if all haven't been checked
+ble $t1, 10, reachedTop     #jump to reach top if laser at top
 j contLaser
 
 reachedTop:
-li $t1, 0
+li $t1, 0                   #marks the laser as black if at the top so it isn't drawn
 sw $t1, 8($t0)
 j contLaser
 
 checkX:
-rem $t5, $t3, 2
+rem $t5, $t3, 2             #determine row to check
 beqz $t5, checkEvenX
 j checkOddX
 
@@ -661,8 +669,8 @@ la $t6, EvenX
 li $t7, 0
 inCheckEven:
 lw $t2, 0($t6)
-addiu $t6, $t6, 4
-addiu $t7, $t7, 1
+addiu $t6, $t6, 4           #move to next x position
+addiu $t7, $t7, 1           #add to counter
 blt $t1, $t2, checkEvencont
 addiu $t2, $t2, 10
 bgt $t1, $t2, checkEvencont
